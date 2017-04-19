@@ -1,8 +1,8 @@
 # **Behavioral Cloning** 
 
-## Writeup Template
+## Introduction
 
-### You can use this file as a template for your writeup if you want to submit it as a markdown file, but feel free to use some other method and submit a pdf if you prefer.
+### As part of the Udacity Self Driving Car Engineer Nanodegree program we train a deep neural network to predict the proper steering angle for driving a simulated autonomous vehicle around a simulated driving track.  This project is a practical exercise in deep learning regression and thoughtful data collection.
 
 ---
 
@@ -55,13 +55,17 @@ The model.py file contains the code for training and saving the convolution neur
 
 #### 1. An appropriate model architecture has been employed
 
-My model consists of a convolution neural network with 3x3 filter sizes and depths between 32 and 128 (model.py lines 18-24) 
+My model architecture is approximately equivalent to [this Nvidia architecture](https://devblogs.nvidia.com/parallelforall/deep-learning-self-driving-cars):
 
-The model includes RELU layers to introduce nonlinearity (code line 20), and the data is normalized in the model using a Keras lambda layer (code line 18). 
+![Nvidia Architecture](https://devblogs.nvidia.com/parallelforall/wp-content/uploads/2016/08/cnn-architecture-624x890.png)
+
+My model has an input image size of 160x320, normalizing using a Keras lambda layer at code line 51.  It then crops away horizon and car hood portions at code line 52.
+
+The Nvidia architecture code starts at line 96. The Nvidia inspired convolutional layers use a stride of 2x2 with valid padding for the 5x5 filters as implied by the layer dimensions shown in the diagram. The 3x3 filters are a stride of 1 with valid padding.  I use rectified linear unit activation for all of the convolutional layers and linear activation for the fully connected layers.
 
 #### 2. Attempts to reduce overfitting in the model
 
-The model contains dropout layers in order to reduce overfitting (model.py lines 21). 
+The model contains dropout layers in order to reduce overfitting as seen in the Nvidia architecture code starting at line 96. 
 
 The model was trained and validated on different data sets to ensure that the model was not overfitting (code line 10-16). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
 
