@@ -5,9 +5,9 @@ import cv2
 
 fieldnames = ['center_path', 'left_path', 'right_path',
               'steering', 'throttle', 'brake', 'speed']
-datadirs = ['CenteredCounterClockwise2Laps',#, 'CenteredClockwise2Laps',
+datadirs = ['CenteredCounterClockwise2Laps','CenteredClockwise2Laps']#,
             #'CounterClockwiseRecovery1Lap', 'ClockwiseRecovery1Lap',
-            'FailureCorrections']
+            #'FailureCorrections2']
 
 # Load relevant driving data to dataframes, folder at a time
 df_list = []
@@ -28,15 +28,17 @@ X_train = np.array([cv2.imread(p) for p in df.center_path])
 y_train = df.steering.values
 
 # Left and right camera data with correction factor
-lr_correction = 0.2
-mask = df.datadir.isin(['CenteredCounterClockwise2Laps'])#, 'CenteredClockwise2Laps'])
+lr_correction = 0.4
+mask = df.datadir.isin(['CenteredCounterClockwise2Laps', 'CenteredClockwise2Laps'])# == datadirs[0]#')
 X_train_left = np.array([cv2.imread(p) for p in df.loc[mask, 'left_path']])
 X_train_right = np.array([cv2.imread(p) for p in df.loc[mask, 'right_path']])
 y_train_left = df.loc[mask, 'steering'].values + lr_correction
 y_train_right = df.loc[mask, 'steering'].values - lr_correction
 # Append it
-X_train = np.concatenate((X_train, X_train_left, X_train_right))
-y_train = np.concatenate((y_train, y_train_left, y_train_right))
+X_train = np.concatenate((X_train_left, X_train_right, X_train))
+y_train = np.concatenate((y_train_left, y_train_right, y_train))
+
+# build
 
 # rec_df = pd.read_csv('RecoveryLaps/driving_log.csv', names=fieldnames, usecols=['center_path', 'steering'])
 
@@ -88,7 +90,7 @@ loss_func = 'mse'
 
 model = Sequential()
 model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160, 320, 3)))
-model.add(Cropping2D(cropping=((70, 25), (0, 0)))) # crop out top 75 pixels and bottom 25
+model.add(Cropping2D(cropping=((60, 25), (0, 0)))) # crop out top 75 pixels and bottom 25
 
 if arch == 'lenet5':
 
