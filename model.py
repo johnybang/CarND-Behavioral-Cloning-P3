@@ -5,7 +5,9 @@ import cv2
 
 fieldnames = ['center_path', 'left_path', 'right_path',
               'steering', 'throttle', 'brake', 'speed']
-datadirs = ['CenteredCounterClockwise2Laps','CenteredClockwise2Laps']#,
+# Directories of captured data
+# left/right camera correction was sufficient so recovery data is excluded
+datadirs = ['CenteredCounterClockwise2Laps','CenteredClockwise2Laps']
             #'CounterClockwiseRecovery1Lap', 'ClockwiseRecovery1Lap',
             #'FailureCorrections2']
 
@@ -23,7 +25,7 @@ for datadir in datadirs:
     df_list.append(this_df)
 df = pd.concat(df_list, ignore_index=True)
 
-# Construct training arrays
+# Construct training data, center camera
 X_train = np.array([cv2.imread(p) for p in df.center_path])
 y_train = df.steering.values
 
@@ -38,39 +40,6 @@ y_train_right = df.loc[mask, 'steering'].values - lr_correction
 X_train = np.concatenate((X_train_left, X_train_right, X_train))
 y_train = np.concatenate((y_train_left, y_train_right, y_train))
 
-# build
-
-# rec_df = pd.read_csv('RecoveryLaps/driving_log.csv', names=fieldnames, usecols=['center_path', 'steering'])
-
-
-# Center camera training data
-# X_train_center = np.array([cv2.imread(os.path.join('sample_data', 'IMG', os.path.basename(p))) for p in df.center_path])
-# y_train_center = df.steering.values
-
-# Center camera horizontal flip
-# X_train_flip = X_train_center[:, :, ::-1, :]
-# y_train_flip = -y_train_center
-
-# Left and right cameras
-# lr_correction = 0.2
-# X_train_left = np.array([cv2.imread(os.path.join('sample_data', 'IMG', os.path.basename(p))) for p in df.left_path])
-# X_train_right = np.array([cv2.imread(os.path.join('sample_data', 'IMG', os.path.basename(p))) for p in df.right_path])
-# y_train_left = y_train_center + lr_correction
-# y_train_right = y_train_center - lr_correction
-
-# Recovery data
-# X_train_rec = np.array([cv2.imread(os.path.join('RecoveryLaps', 'IMG', os.path.basename(p))) for p in rec_df.center_path])
-# y_train_rec = rec_df.steering.values
-
-# Recovery data horizontal flip
-# X_train_rec_flip = X_train_rec[:, :, ::-1, :]
-# y_train_rec_flip = -y_train_rec
-
-# Concatenate datasets
-# X_train = np.concatenate((X_train_center, X_train_flip, X_train_left, X_train_right))
-# y_train = np.concatenate((y_train_center, y_train_flip, y_train_left, y_train_right))
-# X_train = np.concatenate((X_train_center, X_train_flip, X_train_rec, X_train_rec_flip))
-# y_train = np.concatenate((y_train_center, y_train_flip, y_train_rec, y_train_rec_flip))
 
 from keras import backend as K
 from keras.models import Sequential
@@ -80,7 +49,7 @@ from keras.layers.convolutional import Conv2D
 from keras.layers.pooling import MaxPooling2D
 from keras.regularizers import l2
 
-
+# model parameters
 arch = 'nvidia'
 keep_prob_conv = 1.0
 keep_prob_fc = 0.5
@@ -88,9 +57,12 @@ l2_conv = None #l2(0.0)
 l2_fc = None #l2(0.0)
 loss_func = 'mse'
 
+
 model = Sequential()
+# Normalize the images (max scaling and mean subtraction)
 model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160, 320, 3)))
-model.add(Cropping2D(cropping=((60, 25), (0, 0)))) # crop out top 75 pixels and bottom 25
+# Crop out top 60 pixels and bottom 25
+model.add(Cropping2D(cropping=((60, 25), (0, 0))))
 
 if arch == 'lenet5':
 
@@ -137,13 +109,18 @@ else:
 
     raise ValueError("Invalid arch. arch must be lenet5 or nvidia")
 
+# Final steering regression output layer
 model.add(Dense(1))
 
+# Adam optimizer so I don't have to tune learning rate
 model.compile(loss=loss_func, optimizer='adam')
+
+# EarlyStopping to prevent overfitting and automatically stop training
+# Save best validation loss model
 callbacks = [EarlyStopping(monitor='val_loss', patience=5),
              ModelCheckpoint(filepath='model.h5', verbose=1, save_best_only=True)]
+# Train the model
 hist = model.fit(X_train, y_train, validation_split=0.2, shuffle=True, nb_epoch=100, callbacks=callbacks)
 
-# plot_model(model, to_file='model.png')
-
+# to deal with weird error message about deleting keras session
 K.clear_session()
